@@ -1,0 +1,629 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Fungo Airdrop and Bid Lab</title>
+<style>:root{color-scheme:light}body{margin:0}[hidden]{display:none!important}</style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: one centered column, tool first. Header, tab switch, then the active panel.
+   Airdrop panel is inputs beside a live result; the simulator stacks setup, bids and result.
+   Both stack to one column at phone width. */
+:root {
+  --bg: #edf1ec;
+  --surface: #fafbf9;
+  --surface-2: #e1e8e1;
+  --fg: #12201a;
+  --muted: #4a5d53;
+  --line: #c9d4cb;
+  --accent: #e0ad00;
+  --accent-ink: #1b1500;
+  --accent-text: #7a5600;
+  --good: #17653e;
+  --good-soft: #d3eadb;
+  --part: #1f5f9e;
+  --part-soft: #d6e5f4;
+  --out: #4f5a54;
+  --out-soft: #dce2dd;
+  --font-display: "Bricolage Grotesque", "Avenir Next", "Segoe UI", system-ui, sans-serif;
+  --font-body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0e1412;
+    --surface: #151d19;
+    --surface-2: #1d2823;
+    --fg: #e7eee8;
+    --muted: #97a89e;
+    --line: #2a3731;
+    --accent: #f2c230;
+    --accent-ink: #1b1500;
+    --accent-text: #f2c230;
+    --good: #6fdca6;
+    --good-soft: #173a2a;
+    --part: #8cc4f5;
+    --part-soft: #17304a;
+    --out: #a7b3ab;
+    --out-soft: #222b26;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0e1412;
+  --surface: #151d19;
+  --surface-2: #1d2823;
+  --fg: #e7eee8;
+  --muted: #97a89e;
+  --line: #2a3731;
+  --accent: #f2c230;
+  --accent-ink: #1b1500;
+  --accent-text: #f2c230;
+  --good: #6fdca6;
+  --good-soft: #173a2a;
+  --part: #8cc4f5;
+  --part-soft: #17304a;
+  --out: #a7b3ab;
+  --out-soft: #222b26;
+  color-scheme: dark;
+}
+
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-body);
+  font-size: 15px;
+  line-height: 1.55;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 28px 56px;
+}
+.wrap { max-width: 960px; margin: 0 auto; }
+h1, h2 { font-family: var(--font-display); text-wrap: balance; margin: 0; }
+h1 { font-size: clamp(28px, 5vw, 42px); line-height: 1.1; font-weight: 700; letter-spacing: -0.02em; }
+h2 { font-size: 18px; font-weight: 700; margin-bottom: 14px; }
+p { margin: 0; }
+.eyebrow {
+  display: inline-block;
+  font-size: 12px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--accent-text);
+  border: 1px solid var(--accent-text);
+  border-radius: 999px; padding: 2px 10px; margin-bottom: 14px;
+}
+.lead { max-width: 62ch; color: var(--muted); margin-top: 12px; font-size: 16px; }
+
+.tabs { display: flex; gap: 6px; flex-wrap: wrap; margin: 28px 0 20px; border-bottom: 1px solid var(--line); }
+.tabs button {
+  font: inherit; font-weight: 600; background: none; border: 0; cursor: pointer;
+  color: var(--muted); padding: 10px 14px; border-bottom: 3px solid transparent; margin-bottom: -1px;
+}
+.tabs button[aria-selected="true"] { color: var(--fg); border-bottom-color: var(--accent); }
+:focus-visible { outline: 2px solid var(--accent-text); outline-offset: 2px; }
+
+.grid { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); gap: 20px; align-items: start; }
+.stack { display: grid; gap: 20px; }
+@media (max-width: 760px) { .grid { grid-template-columns: minmax(0, 1fr); } }
+
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 20px; min-width: 0; }
+.field { display: grid; gap: 6px; margin-bottom: 16px; }
+.field:last-child { margin-bottom: 0; }
+label, .label {
+  font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted);
+}
+input[type="number"], input[type="text"] {
+  width: 100%; min-width: 0; box-sizing: border-box;
+  font-family: var(--font-mono); font-size: 16px; color: var(--fg);
+  background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 9px 10px;
+}
+input:focus-visible { border-color: var(--accent-text); }
+.hint { font-size: 13px; color: var(--muted); }
+details { margin-top: 18px; }
+summary { cursor: pointer; color: var(--muted); font-weight: 600; font-size: 13px; }
+details .field { margin-top: 12px; }
+
+.big {
+  font-family: var(--font-mono); font-weight: 500; letter-spacing: -0.02em;
+  font-size: clamp(26px, 7vw, 44px); line-height: 1.1; margin: 6px 0 14px;
+  font-variant-numeric: tabular-nums; overflow-wrap: anywhere;
+}
+.unit { font-size: 0.4em; letter-spacing: 0.06em; color: var(--accent-text); font-weight: 600; }
+.split { display: flex; height: 10px; border-radius: 999px; overflow: hidden; background: var(--surface-2); margin-bottom: 16px; }
+.split span:first-child { background: var(--accent); }
+.split span:last-child { background: var(--part); }
+.rows { display: grid; gap: 0; margin-bottom: 16px; }
+.row {
+  display: flex; justify-content: space-between; gap: 16px; padding: 9px 0; border-top: 1px solid var(--line);
+}
+.row span:first-child { color: var(--muted); min-width: 0; }
+.row span:last-child { font-family: var(--font-mono); text-align: right; font-variant-numeric: tabular-nums; min-width: 0; overflow-wrap: anywhere; }
+.btn {
+  font: inherit; font-weight: 600; cursor: pointer; border-radius: 6px; padding: 9px 14px;
+  background: var(--accent); color: var(--accent-ink); border: 1px solid var(--accent);
+}
+.btn.ghost { background: transparent; color: var(--fg); border-color: var(--line); }
+.btn.small { padding: 6px 10px; font-size: 13px; }
+.actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+
+.notes { margin: 20px 0 0; padding-left: 18px; color: var(--muted); font-size: 13.5px; display: grid; gap: 6px; max-width: 80ch; }
+
+.setup { display: flex; flex-wrap: wrap; gap: 16px; align-items: end; margin-bottom: 10px; }
+.setup .field { margin: 0; width: 180px; max-width: 100%; }
+.presets { display: flex; flex-wrap: wrap; gap: 8px; }
+
+.bidrow { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1.2fr) minmax(0, 0.7fr) 40px; gap: 8px; align-items: center; margin-bottom: 8px; }
+.bidhead { margin-bottom: 6px; }
+.bidhead span { font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+.bidrow .x { font: inherit; font-size: 18px; line-height: 1; cursor: pointer; background: transparent; color: var(--muted); border: 1px solid var(--line); border-radius: 6px; height: 38px; }
+.bidfoot { margin-top: 12px; }
+
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; margin-bottom: 18px; }
+.tile { border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; min-width: 0; }
+.tile .v { font-family: var(--font-mono); font-size: 22px; font-weight: 500; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; margin-top: 2px; }
+.tile .s { font-size: 13px; color: var(--muted); }
+
+.barwrap { position: relative; padding-bottom: 34px; margin-bottom: 6px; }
+.bar { display: flex; height: 44px; border-radius: 8px; overflow: hidden; border: 1px solid var(--line); background: var(--surface-2); }
+.seg { display: flex; align-items: center; padding: 0 6px; font-size: 12px; font-weight: 600; overflow: hidden; white-space: nowrap; border-right: 1px solid var(--bg); min-width: 2px; box-sizing: border-box; }
+.seg.full { background: var(--good-soft); color: var(--good); }
+.seg.partial { background: var(--part-soft); color: var(--part); }
+.seg.out { background: var(--out-soft); color: var(--out); }
+.marker { position: absolute; top: -5px; height: 54px; width: 2px; background: var(--fg); }
+.markerlabel { position: absolute; top: 52px; font-size: 12px; font-weight: 600; white-space: nowrap; transform: translateX(-50%); }
+.markerlabel.right { transform: translateX(-100%); }
+.markerlabel.left { transform: none; }
+.legend { display: flex; flex-wrap: wrap; gap: 14px; font-size: 13px; color: var(--muted); margin-bottom: 18px; }
+.legend i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 6px; vertical-align: -1px; }
+.legend .a { background: var(--good-soft); border: 1px solid var(--good); }
+.legend .b { background: var(--part-soft); border: 1px solid var(--part); }
+.legend .c { background: var(--out-soft); border: 1px solid var(--out); }
+
+.tablewrap { overflow-x: auto; margin-bottom: 16px; }
+table { border-collapse: collapse; width: 100%; min-width: 560px; font-size: 14px; }
+th { text-align: left; font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); padding: 8px 10px; border-bottom: 1px solid var(--line); }
+td { padding: 9px 10px; border-bottom: 1px solid var(--line); }
+th.n, td.n { text-align: right; font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+th.n { font-family: var(--font-body); }
+.chip { display: inline-block; padding: 2px 9px; border-radius: 999px; font-size: 12px; font-weight: 600; white-space: nowrap; }
+.chip.full { background: var(--good-soft); color: var(--good); }
+.chip.partial { background: var(--part-soft); color: var(--part); }
+.chip.out { background: var(--out-soft); color: var(--out); }
+.msg { font-size: 14px; color: var(--muted); }
+footer { margin-top: 36px; padding-top: 16px; border-top: 1px solid var(--line); font-size: 13px; color: var(--muted); max-width: 80ch; }
+footer a { color: var(--accent-text); }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <span class="eyebrow">Unofficial community tool</span>
+    <h1>Fungo Airdrop and Bid Lab</h1>
+    <p class="lead">See what your Genesis and Zama OG NFTs receive at TGE, and try out how a sealed-bid sale sets its price. Every figure comes from the public Fungo pages.</p>
+  </header>
+
+  <div class="tabs" role="tablist" aria-label="Tools">
+    <button role="tab" id="tab-airdrop" aria-controls="panel-airdrop" aria-selected="true">Airdrop calculator</button>
+    <button role="tab" id="tab-bid" aria-controls="panel-bid" aria-selected="false" tabindex="-1">Sealed-bid simulator</button>
+  </div>
+
+  <section id="panel-airdrop" role="tabpanel" aria-labelledby="tab-airdrop">
+    <div class="grid">
+      <div class="card">
+        <h2>Your NFTs at the TGE block</h2>
+        <div class="field">
+          <label for="g">Genesis NFTs</label>
+          <input id="g" type="number" inputmode="numeric" min="0" max="3232" step="1" value="1">
+          <span class="hint">3,232 exist. Each one gets the same amount.</span>
+        </div>
+        <div class="field">
+          <label for="o">Zama OG NFTs</label>
+          <input id="o" type="number" inputmode="numeric" min="0" max="4996" step="1" value="5">
+          <span class="hint">4,996 today. Each one gets the same amount.</span>
+        </div>
+        <details>
+          <summary>Advanced</summary>
+          <div class="field">
+            <label for="oc">Zama OG NFTs at the TGE block</label>
+            <input id="oc" type="number" inputmode="numeric" min="1" max="99999" step="1" value="4996">
+            <span class="hint">The 700,000,000 FUNGO share is split across however many Zama OG NFTs exist at that block, rounded down to a whole FUNGO.</span>
+          </div>
+        </details>
+      </div>
+
+      <div class="card" aria-live="polite">
+        <span class="label">Your airdrop at TGE</span>
+        <p class="big"><span id="total">0</span> <span class="unit">FUNGO</span></p>
+        <div class="split" aria-hidden="true"><span id="sg"></span><span id="so"></span></div>
+        <div class="rows">
+          <div class="row"><span id="lg">Genesis</span><span id="vg">0</span></div>
+          <div class="row"><span id="lo">Zama OG</span><span id="vo">0</span></div>
+          <div class="row"><span>Share of the 10B supply</span><span id="vs">0%</span></div>
+          <div class="row"><span>Slice of the Genesis fee pool</span><span id="vp">None</span></div>
+        </div>
+        <div class="actions">
+          <button class="btn" id="copy-a" type="button">Copy summary</button>
+          <span class="msg" id="copy-a-msg" role="status"></span>
+        </div>
+      </div>
+    </div>
+    <ul class="notes">
+      <li>Holders at the TGE block get their share. Claims open within hours of TGE and stay open for 7 days. Anything unclaimed after that is burned.</li>
+      <li>You can take your share as regular FUNGO or sealed as cFUNGO if you prefer privacy.</li>
+      <li>The X campaign pool of 300,000,000 FUNGO goes to accounts approved in a manual review, so it is not part of this number.</li>
+      <li>The Genesis fee pool is 20% of the launchpad's fees, split equally among all 3,232 Genesis NFTs. The slice shown is your share of that pool, which says nothing about how large the fees will be.</li>
+    </ul>
+  </section>
+
+  <section id="panel-bid" role="tabpanel" aria-labelledby="tab-bid" hidden>
+    <div class="stack">
+      <div class="card">
+        <h2>Sale setup</h2>
+        <div class="setup">
+          <div class="field">
+            <label for="supply">NFTs for sale</label>
+            <input id="supply" type="number" inputmode="numeric" min="1" max="100000" step="1" value="10">
+          </div>
+          <div class="presets">
+            <button class="btn ghost small" type="button" data-supply="10">Demo size (10)</button>
+            <button class="btn ghost small" type="button" data-supply="2500">Real size (2,500)</button>
+          </div>
+        </div>
+        <p class="hint">The real Genesis sale offers 2,500 NFTs paid in cZAMA. Demo size lets a handful of bids fill the sale so the pricing is easy to follow. The bids below are examples, so edit them freely.</p>
+      </div>
+
+      <div class="card">
+        <h2>Bids</h2>
+        <div class="bidrow bidhead"><span>Bidder</span><span>Price (cZAMA)</span><span>Qty</span><span></span></div>
+        <div id="bids"></div>
+        <div class="bidfoot"><button class="btn ghost small" type="button" id="add">Add a bid</button></div>
+      </div>
+
+      <div class="card" aria-live="polite">
+        <h2>Result</h2>
+        <div class="tiles">
+          <div class="tile"><span class="label">Final price</span><div class="v" id="t-price">n/a</div><div class="s" id="t-price-s"></div></div>
+          <div class="tile"><span class="label">Demand vs supply</span><div class="v" id="t-demand">n/a</div><div class="s" id="t-demand-s"></div></div>
+          <div class="tile"><span class="label">cZAMA collected</span><div class="v" id="t-paid">n/a</div><div class="s">Before the small bid fee</div></div>
+        </div>
+        <div class="barwrap">
+          <div class="bar" id="bar"></div>
+          <div class="marker" id="marker"></div>
+          <div class="markerlabel" id="markerlabel"></div>
+        </div>
+        <div class="legend">
+          <span><i class="a"></i>Wins all it asked for</span>
+          <span><i class="b"></i>Partly filled</span>
+          <span><i class="c"></i>Not filled</span>
+          <span>Empty space: NFTs nobody bid on</span>
+        </div>
+        <div class="tablewrap">
+          <table>
+            <thead><tr><th>Bidder</th><th class="n">Bid</th><th>Status</th><th class="n">NFTs won</th><th class="n">Pays</th><th class="n">Refund</th></tr></thead>
+            <tbody id="results"></tbody>
+          </table>
+        </div>
+        <div class="actions">
+          <button class="btn" id="copy-b" type="button">Copy summary</button>
+          <span class="msg" id="copy-b-msg" role="status"></span>
+        </div>
+      </div>
+    </div>
+    <ul class="notes">
+      <li>Bids stay encrypted while bidding is open. When the sale ends they are ranked from highest to lowest, and the lowest winning bid, the one that fills the last NFT, sets the price every winner pays. Extra cZAMA is refunded.</li>
+      <li>Bids above the final price get their full quantity. Bids exactly at the final price split the remaining NFTs pro rata. Bids below it get nothing and are refunded.</li>
+      <li>If total demand stays below the number of NFTs for sale, everyone buys at the lowest bid price.</li>
+      <li>Bids are binding, and each one carries a small non-refundable fee for encrypted bidding. The fee amount is not modeled here.</li>
+      <li>The site does not describe how pro rata shares are rounded. This tool rounds down and gives leftover NFTs to the largest remainders, so a real result may differ by an NFT.</li>
+    </ul>
+  </section>
+
+  <footer>
+    Not affiliated with FungoLabs. Figures come from the <a href="https://fungolabs.org/launchpad/tokenomics" target="_blank" rel="noopener">Tokenomics page</a> and the official sealed-bid thread on X. Check @FungoLabs for dates and final rules. This is arithmetic, not financial advice.
+  </footer>
+</div>
+
+<script>
+(function () {
+  var GENESIS_EACH = 1113861;
+  var GENESIS_COUNT = 3232;
+  var OG_POOL = 700000000;
+  var SUPPLY_TOTAL = 10000000000;
+
+  function $(id) { return document.getElementById(id); }
+  function fmt(n) { return Number(n).toLocaleString('en-US'); }
+  function fmtPct(n) { return n.toLocaleString('en-US', { maximumFractionDigits: 4 }); }
+  function clampInt(v, max) {
+    var n = Math.floor(Number(v));
+    if (!isFinite(n) || n < 0) n = 0;
+    return Math.min(n, max);
+  }
+
+  // <settle>
+  function settle(bids, supply) {
+    var res = {};
+    bids.forEach(function (b) { res[b.id] = { won: 0, status: 'out' }; });
+    var valid = bids.filter(function (b) { return b.price > 0 && b.qty > 0; });
+    if (!valid.length || !(supply > 0)) return { finalPrice: null, res: res, demand: 0, mode: 'empty' };
+    var demand = valid.reduce(function (s, b) { return s + b.qty; }, 0);
+    if (demand <= supply) {
+      var low = Math.min.apply(null, valid.map(function (b) { return b.price; }));
+      valid.forEach(function (b) { res[b.id] = { won: b.qty, status: 'full' }; });
+      return { finalPrice: low, res: res, demand: demand, mode: 'under' };
+    }
+    var prices = valid.map(function (b) { return b.price; })
+      .filter(function (p, i, a) { return a.indexOf(p) === i; })
+      .sort(function (a, b) { return b - a; });
+    var cum = 0, finalPrice = null;
+    for (var i = 0; i < prices.length; i++) {
+      var p = prices[i];
+      var tier = valid.filter(function (b) { return b.price === p; });
+      var tq = tier.reduce(function (s, b) { return s + b.qty; }, 0);
+      if (cum + tq >= supply) {
+        finalPrice = p;
+        var remaining = supply - cum;
+        if (remaining >= tq) {
+          tier.forEach(function (b) { res[b.id] = { won: b.qty, status: 'full' }; });
+        } else {
+          var shares = tier.map(function (b) {
+            var exact = b.qty * remaining / tq;
+            return { b: b, exact: exact, got: Math.floor(exact) };
+          });
+          var left = remaining - shares.reduce(function (s, x) { return s + x.got; }, 0);
+          shares.slice().sort(function (x, y) {
+            return (y.exact - y.got) - (x.exact - x.got);
+          }).forEach(function (x) { if (left > 0) { x.got += 1; left -= 1; } });
+          shares.forEach(function (x) {
+            res[x.b.id] = {
+              won: x.got,
+              status: x.got === 0 ? 'out' : (x.got === x.b.qty ? 'full' : 'partial')
+            };
+          });
+        }
+        break;
+      }
+      tier.forEach(function (b) { res[b.id] = { won: b.qty, status: 'full' }; });
+      cum += tq;
+    }
+    return { finalPrice: finalPrice, res: res, demand: demand, mode: 'over' };
+  }
+  // </settle>
+
+  /* ---------- tabs ---------- */
+  var tabs = {
+    airdrop: { tab: $('tab-airdrop'), panel: $('panel-airdrop') },
+    bid: { tab: $('tab-bid'), panel: $('panel-bid') }
+  };
+  function show(name) {
+    Object.keys(tabs).forEach(function (k) {
+      var on = k === name;
+      tabs[k].tab.setAttribute('aria-selected', on ? 'true' : 'false');
+      tabs[k].tab.tabIndex = on ? 0 : -1;
+      tabs[k].panel.hidden = !on;
+    });
+  }
+  function route() { show(location.hash === '#bid' ? 'bid' : 'airdrop'); }
+  Object.keys(tabs).forEach(function (k) {
+    tabs[k].tab.addEventListener('click', function () { show(k); location.hash = k; });
+    tabs[k].tab.addEventListener('keydown', function (e) {
+      if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+      var other = k === 'airdrop' ? 'bid' : 'airdrop';
+      tabs[other].tab.focus();
+      show(other);
+      location.hash = other;
+    });
+  });
+  window.addEventListener('hashchange', route);
+
+  /* ---------- copy helper ---------- */
+  function copyText(text, msgEl, sourceEl) {
+    function done(ok) {
+      msgEl.textContent = ok ? 'Copied' : 'Copy was blocked here. Select the figures and copy them by hand.';
+      if (ok) setTimeout(function () { msgEl.textContent = ''; }, 1800);
+    }
+    function fallback() {
+      try {
+        var r = document.createRange();
+        r.selectNodeContents(sourceEl);
+        var s = window.getSelection();
+        s.removeAllRanges();
+        s.addRange(r);
+      } catch (e) { /* selection unavailable */ }
+      done(false);
+    }
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(function () { done(true); }, fallback);
+      } else {
+        fallback();
+      }
+    } catch (e) { fallback(); }
+  }
+
+  /* ---------- airdrop calculator ---------- */
+  var gEl = $('g'), oEl = $('o'), ocEl = $('oc');
+  var lastAirdropText = '';
+  function calcAirdrop() {
+    var ocount = clampInt(ocEl.value, 99999) || 1;
+    var ogEach = Math.floor(OG_POOL / ocount);
+    var g = clampInt(gEl.value, GENESIS_COUNT);
+    var o = clampInt(oEl.value, ocount);
+    var gv = g * GENESIS_EACH;
+    var ov = o * ogEach;
+    var total = gv + ov;
+    $('total').textContent = fmt(total);
+    $('lg').textContent = fmt(g) + ' Genesis × ' + fmt(GENESIS_EACH);
+    $('lo').textContent = fmt(o) + ' Zama OG × ' + fmt(ogEach);
+    $('vg').textContent = fmt(gv);
+    $('vo').textContent = fmt(ov);
+    var pct = total / SUPPLY_TOTAL * 100;
+    $('vs').textContent = fmtPct(pct) + '%';
+    $('vp').textContent = g > 0 ? fmtPct(g / GENESIS_COUNT * 100) + '% of the pool' : 'None';
+    $('sg').style.width = total > 0 ? (gv / total * 100) + '%' : '0%';
+    $('so').style.width = total > 0 ? (ov / total * 100) + '%' : '0%';
+    lastAirdropText = fmt(g) + ' Genesis + ' + fmt(o) + ' Zama OG = ' + fmt(total) +
+      ' FUNGO at the TGE block (' + fmtPct(pct) + '% of the 10B supply). Unofficial calculation from the public tokenomics page.';
+  }
+  [gEl, oEl, ocEl].forEach(function (el) {
+    el.addEventListener('input', calcAirdrop);
+    el.addEventListener('change', function () {
+      var max = el === gEl ? GENESIS_COUNT : (el === oEl ? (clampInt(ocEl.value, 99999) || 1) : 99999);
+      el.value = clampInt(el.value, max);
+      calcAirdrop();
+    });
+  });
+  $('copy-a').addEventListener('click', function () {
+    copyText(lastAirdropText, $('copy-a-msg'), document.querySelector('#panel-airdrop .big'));
+  });
+
+  /* ---------- sealed-bid simulator ---------- */
+  var nextId = 1;
+  var bids = [
+    { name: 'Ayu', price: 15000, qty: 3 },
+    { name: 'Bima', price: 12000, qty: 2 },
+    { name: 'Citra', price: 10000, qty: 3 },
+    { name: 'Dian', price: 10000, qty: 4 },
+    { name: 'Eko', price: 8000, qty: 4 }
+  ].map(function (b) { b.id = nextId++; return b; });
+
+  var bidsEl = $('bids'), supplyEl = $('supply');
+  var lastBidText = '';
+
+  function buildRows() {
+    bidsEl.innerHTML = '';
+    bids.forEach(function (b) {
+      var row = document.createElement('div');
+      row.className = 'bidrow';
+      row.innerHTML =
+        '<input type="text" id="n-' + b.id + '" data-id="' + b.id + '" data-f="name" aria-label="Bidder name" maxlength="24">' +
+        '<input type="number" id="p-' + b.id + '" data-id="' + b.id + '" data-f="price" aria-label="Bid price in cZAMA" inputmode="numeric" min="0" step="1">' +
+        '<input type="number" id="q-' + b.id + '" data-id="' + b.id + '" data-f="qty" aria-label="Quantity" inputmode="numeric" min="0" step="1">' +
+        '<button class="x" type="button" data-remove="' + b.id + '" aria-label="Remove bid">×</button>';
+      bidsEl.appendChild(row);
+      $('n-' + b.id).value = b.name;
+      $('p-' + b.id).value = b.price;
+      $('q-' + b.id).value = b.qty;
+    });
+    $('add').disabled = bids.length >= 12;
+  }
+
+  bidsEl.addEventListener('input', function (e) {
+    var t = e.target;
+    if (!t.dataset || !t.dataset.id) return;
+    var b = bids.filter(function (x) { return String(x.id) === t.dataset.id; })[0];
+    if (!b) return;
+    if (t.dataset.f === 'name') b.name = t.value;
+    else b[t.dataset.f] = Math.max(0, Math.floor(Number(t.value)) || 0);
+    renderResult();
+  });
+  bidsEl.addEventListener('click', function (e) {
+    var id = e.target && e.target.dataset ? e.target.dataset.remove : null;
+    if (!id) return;
+    bids = bids.filter(function (x) { return String(x.id) !== id; });
+    buildRows();
+    renderResult();
+  });
+  $('add').addEventListener('click', function () {
+    if (bids.length >= 12) return;
+    bids.push({ id: nextId++, name: 'Bidder ' + (bids.length + 1), price: 10000, qty: 1 });
+    buildRows();
+    renderResult();
+  });
+  supplyEl.addEventListener('input', renderResult);
+  Array.prototype.forEach.call(document.querySelectorAll('[data-supply]'), function (btn) {
+    btn.addEventListener('click', function () {
+      supplyEl.value = btn.getAttribute('data-supply');
+      renderResult();
+    });
+  });
+
+  function cell(tr, text, cls) {
+    var td = document.createElement('td');
+    if (cls) td.className = cls;
+    td.textContent = text;
+    tr.appendChild(td);
+    return td;
+  }
+
+  function renderResult() {
+    var supply = clampInt(supplyEl.value, 100000);
+    var out = settle(bids, supply);
+    var fp = out.finalPrice;
+    var paidTotal = 0;
+
+    var body = $('results');
+    body.innerHTML = '';
+    bids.forEach(function (b) {
+      var r = out.res[b.id];
+      var valid = b.price > 0 && b.qty > 0;
+      var tr = document.createElement('tr');
+      cell(tr, b.name || 'Unnamed');
+      cell(tr, valid ? fmt(b.price) + ' × ' + fmt(b.qty) : 'incomplete', 'n');
+      var st = document.createElement('td');
+      var chip = document.createElement('span');
+      var label = !valid ? 'Incomplete' : (r.status === 'full' ? 'Won all' : (r.status === 'partial' ? 'Partly filled' : 'Not filled'));
+      chip.className = 'chip ' + (valid ? r.status : 'out');
+      chip.textContent = label;
+      st.appendChild(chip);
+      tr.appendChild(st);
+      if (valid && fp !== null) {
+        var pays = r.won * fp;
+        var refund = b.price * b.qty - pays;
+        paidTotal += pays;
+        cell(tr, fmt(r.won), 'n');
+        cell(tr, fmt(pays), 'n');
+        cell(tr, fmt(refund), 'n');
+      } else {
+        cell(tr, '-', 'n'); cell(tr, '-', 'n'); cell(tr, '-', 'n');
+      }
+      body.appendChild(tr);
+    });
+
+    var validBids = bids.filter(function (b) { return b.price > 0 && b.qty > 0; });
+    $('t-price').textContent = fp === null ? 'n/a' : fmt(fp);
+    $('t-price-s').textContent = fp === null ? 'Add a bid with a price and quantity' :
+      (out.mode === 'under' ? 'Demand is below supply, so everyone pays the lowest bid' : 'cZAMA per NFT, the same for every winner');
+    $('t-demand').textContent = fmt(out.demand) + ' / ' + fmt(supply);
+    $('t-demand-s').textContent = out.demand > supply ? 'More demand than NFTs' : 'Every NFT bid on fills';
+    $('t-paid').textContent = fp === null ? 'n/a' : fmt(paidTotal);
+
+    /* bar: width is quantity, bids ordered from highest price */
+    var bar = $('bar');
+    bar.innerHTML = '';
+    var total = Math.max(out.demand, supply, 1);
+    var ordered = validBids.slice().sort(function (a, b) { return b.price - a.price; });
+    ordered.forEach(function (b) {
+      var w = b.qty / total * 100;
+      var seg = document.createElement('div');
+      seg.className = 'seg ' + out.res[b.id].status;
+      seg.style.width = w + '%';
+      seg.title = (b.name || 'Unnamed') + ': ' + fmt(b.qty) + ' at ' + fmt(b.price);
+      if (w >= 9) seg.textContent = (b.name || 'Unnamed') + ' ' + fmt(b.qty);
+      bar.appendChild(seg);
+    });
+    var mp = supply / total * 100;
+    $('marker').style.left = 'calc(' + mp + '% - 1px)';
+    var ml = $('markerlabel');
+    ml.textContent = fmt(supply) + ' NFTs for sale';
+    ml.style.left = mp + '%';
+    ml.className = 'markerlabel' + (mp > 80 ? ' right' : (mp < 20 ? ' left' : ''));
+
+    lastBidText = fp === null ? '' :
+      'Sealed-bid example: ' + fmt(supply) + ' NFTs, ' + fmt(validBids.length) + ' bids, final price ' + fmt(fp) +
+      ' cZAMA for every winner, ' + fmt(paidTotal) + ' cZAMA collected. Example bids, unofficial simulation.';
+  }
+  $('copy-b').addEventListener('click', function () {
+    if (!lastBidText) { $('copy-b-msg').textContent = 'Add a bid first.'; return; }
+    copyText(lastBidText, $('copy-b-msg'), $('results'));
+  });
+
+  buildRows();
+  calcAirdrop();
+  renderResult();
+  route();
+})();
+</script>
+</body>
+</html>
